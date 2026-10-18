@@ -62,6 +62,65 @@ acceptor.stop()
 and `TargetCompID (56)` fields. Use `wait_admin_message()` for logon and other
 administrative messages, and `wait_message()` for application messages.
 
+## Building order messages
+
+The builder contexts wrap and update a `Message`. State methods return the
+context; call it to get the same message back. Supply the fields required by
+your counterparty and FIX dictionary, including identifiers, side, quantities,
+timestamps, and execution details as appropriate.
+
+```python
+from src import Message, OrderContext, ExecutionReportContext, build_default_fix_message
+
+fields = build_default_fix_message("AAPL", quantity=2, lot_size=100, price=150.0)
+order = OrderContext(fields).new({11: "order-1", 54: "1", 60: "20260101-12:00:00"})()
+cancel = OrderContext(Message({41: "order-1", 11: "cancel-1", 55: "AAPL", 54: "1"})).cancel()()
+
+report = ExecutionReportContext(Message({8: "FIX.4.4", 11: "order-1"}))
+pending = report.pending_new()()
+filled = report.fulfill({14: "200", 151: "0", 32: "200", 31: "150"})()
+```
+
+`OrderContext.new()` builds a NewOrderSingle request and `cancel()` builds an
+OrderCancelRequest. `ExecutionReportContext` supports `new()`, `fulfill()`
+(also spelled `fullfil()`), `partfill()`, `cancel()`, `reject()`,
+`pending_new()`, `pending_cancel()`, and `pending_replace()`. These methods
+set the message type and execution/order status fields; they do not fill in
+all fields required for a complete FIX message. Both contexts mutate the
+wrapped message, so create separate `Message` objects for independent reports.
+Fill execution codes use FIX 4.4 conventions when tag 8 is absent, and use
+the older fill codes for FIX 4.1 through 4.3. FIX 4.0 reports omit ExecType;
+pending replace is unavailable in FIX 4.0 and 4.1.
+
+You can provide your own implementation of either context. Subclass
+`IOrderContext` for outgoing requests or `IExecutionReportContext` for
+execution reports, and implement the corresponding methods for your
+counterparty. Both base classes wrap a `Message`, expose it through `()`, and
+provide `_update()` for applying field mappings and keyword arguments. For
+example:
+
+```python
+from src import Message
+from src.utils.builder.context.interface import IOrderContext
+
+class CustomOrderContext(IOrderContext):
+    def new(self, fields=None, **tags):
+        self._update(fields, **tags)
+        self.message.update({35: "D", 100: "MY_VENUE"})
+        return self
+
+    def cancel(self, fields=None, **tags):
+        self._update(fields, **tags)
+        self.message.update({35: "F", 100: "MY_VENUE"})
+        return self
+
+order = CustomOrderContext(Message({11: "order-1"})).new()()
+```
+
+For a custom execution-report context, implement its state methods in the same
+way. If you use the `fullfil` or `partial_fill` aliases, define them in your
+subclass as well.
+
 QuickFIX stores session state in `FixPythocolSession/` and writes logs to
 `FixPythocolLogs/` relative to the working directory. Pass settings such as
 `FileStorePath`, `FileLogPath`, or `HeartBtInt` as additional constructor
@@ -75,3 +134,21 @@ logon, order delivery, rule-based and default responses, and timeout behavior:
 ```bash
 python -m pytest tests
 ```
+
+To collect Allure results, run:
+
+```bash
+python -m pytest tests --alluredir=allure-results
+```
+
+Install the [Allure command-line tool](https://allurereport.org/docs/install/)
+separately to view a report, then run `allure serve allure-results`. Results
+are kept in the directory between runs; use a fresh directory for a new run.
+
+The report includes text attachments for built messages, initiator sends,
+acceptor and initiator receives, and configured default responses. Messages
+are displayed as FIX `tag=value` lines; separately stored party groups are
+included for constructed messages. Attachments contain message values,
+including any credentials or trading data present, so protect the results and
+reports accordingly. Allure steps and attachments are recorded when an Allure
+listener is active, such as a pytest run with `--alluredir`.

@@ -1,2 +1,5 @@
 quickfix==1.15.1
+# Allure is used by the session and builder code as well as the pytest plugin.
+allure-python-commons==2.16.2
 pytest==9.1.1
+allure-pytest==2.16.2

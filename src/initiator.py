@@ -3,9 +3,11 @@ import os
 import time
 import typing as t
 
+import allure
 import quickfix as fix
 
 from .application import Application
+from .allure_reporting import attach_message, attach_messages
 from .exception import MessageNotFound
 from .helpers import (
     SOH,
@@ -68,41 +70,49 @@ class Initiator:
 
     def start(self) -> None:
         """Start the initiator and wait until the session logs on."""
-        self._initiator.start()
-        _wait_session_login(self._application.get_session())
+        with allure.step("Start initiator and wait for FIX logon"):
+            self._initiator.start()
+            _wait_session_login(self._application.get_session())
 
     def stop(self) -> None:
         """Stop the QuickFIX initiator."""
-        self._initiator.stop()
+        with allure.step("Stop initiator"):
+            self._initiator.stop()
 
     def send(self, message: Message) -> None:
         """Send a domain message to the connected acceptor."""
-        if not message.is_string():
-            __required_field_tag_ids = {
-                8: str(self.session.getBeginString()).split("=")[1].replace(SOH, ''),
-                49: str(self.session.getSenderCompID()).split("=")[1].replace(SOH, ''),
-                56: str(self.session.getTargetCompID()).split("=")[1].replace(SOH, '')
-            }
-            for key, value in __required_field_tag_ids.items():
-                if key not in message.model_dump(use_tag_id=True).keys():
-                    message.update({key: value})
-        
-        self._application.send(message)
+        with allure.step("Send FIX message from initiator"):
+            if not message.is_string():
+                __required_field_tag_ids = {
+                    8: str(self.session.getBeginString()).split("=")[1].replace(SOH, ''),
+                    49: str(self.session.getSenderCompID()).split("=")[1].replace(SOH, ''),
+                    56: str(self.session.getTargetCompID()).split("=")[1].replace(SOH, '')
+                }
+                for key, value in __required_field_tag_ids.items():
+                    if key not in message.model_dump(use_tag_id=True).keys():
+                        message.update({key: value})
+
+            attach_message(message, "Initiator outgoing message")
+            self._application.send(message)
 
     def wait_message(self, message_count: int = 1, timeout: int = 5, 
                      condition: t.Callable[[t.List[Message]], bool] = None) -> t.List[Message]:
         """Wait for and return received application messages."""
-        messages = self.__wait_application_message(
-            self._application.pop_received_message, message_count, 
-            timeout, condition
-        )
-        return messages
+        with allure.step(f"Initiator waits for {message_count} application message(s)"):
+            messages = self.__wait_application_message(
+                self._application.pop_received_message, message_count,
+                timeout, condition
+            )
+            attach_messages(messages, "Initiator received application message")
+            return messages
 
     def wait_admin_message(self, message_count: int = 1, timeout: int = 5, 
                            condition: t.Callable[[t.List[Message]], bool] = None) -> t.List[Message]:
         """Wait for and return received administrative messages."""
-        messages = self.__wait_application_message(
-            self._application.pop_received_admin_message, message_count, 
-            timeout, condition
-        )
-        return messages
+        with allure.step(f"Initiator waits for {message_count} administrative message(s)"):
+            messages = self.__wait_application_message(
+                self._application.pop_received_admin_message, message_count,
+                timeout, condition
+            )
+            attach_messages(messages, "Initiator received administrative message")
+            return messages

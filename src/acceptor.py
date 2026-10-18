@@ -3,9 +3,11 @@ import os
 import time
 import typing as t 
 
+import allure
 import quickfix as fix
 
 from .application import Application
+from .allure_reporting import attach_message, attach_messages
 from .exception import MessageNotFound
 from .helpers import (
     _get_session_settings,
@@ -48,36 +50,41 @@ class Acceptor:
 
     def start(self) -> None:
         """Start listening and wait until the configured session logs on."""
-        self._acceptor.start()
-        _wait_session_login(self._application.get_session())
-        self._application.run()
+        with allure.step("Start acceptor and wait for FIX logon"):
+            self._acceptor.start()
+            _wait_session_login(self._application.get_session())
+            self._application.run()
 
     def stop(self) -> None:
         """Stop the QuickFIX acceptor and its application worker."""
-        self._acceptor.stop()
-        self._application.stop()
+        with allure.step("Stop acceptor"):
+            self._acceptor.stop()
+            self._application.stop()
 
     def add_rule(self, condition: t.Callable[[Message], bool], scenario: t.Callable[[Application, Message], None]) -> None:
         """Register a condition and callback for incoming application messages."""
-        self._application.add_rule_scenario(condition, scenario)
+        with allure.step("Register acceptor response rule"):
+            self._application.add_rule_scenario(condition, scenario)
 
     def add_default_response(self, message: Message) -> None:
         """Set the response sent when no registered rule matches."""
-        self._application.add_default_response(message)
+        with allure.step("Register acceptor default response"):
+            attach_message(message, "Acceptor default response")
+            self._application.add_default_response(message)
 
     def wait_message(self, message_count: int = 1, timeout: int = 5, condition: t.Callable[[t.List[Message]], bool] = None) -> t.List[Message]:
         """Wait for and return received application messages."""
-        sleeping_second = 0.3
-        wait_message_iteration = timeout / sleeping_second
-        count = itertools.count()
-        while next(count) <= wait_message_iteration:
-            try:
-                messages = self._application.pop_received_message(message_count)
-                if condition is not None and condition(messages):
-                    return messages
-                elif condition is None:
-                    return messages
-                time.sleep(sleeping_second)
-            except MessageNotFound:
-                time.sleep(sleeping_second)
-        raise MessageNotFound("message not found") # PLACEHOLDER 
+        with allure.step(f"Acceptor waits for {message_count} application message(s)"):
+            sleeping_second = 0.3
+            wait_message_iteration = timeout / sleeping_second
+            count = itertools.count()
+            while next(count) <= wait_message_iteration:
+                try:
+                    messages = self._application.pop_received_message(message_count)
+                    if condition is None or condition(messages):
+                        attach_messages(messages, "Acceptor received message")
+                        return messages
+                    time.sleep(sleeping_second)
+                except MessageNotFound:
+                    time.sleep(sleeping_second)
+            raise MessageNotFound("message not found") # PLACEHOLDER
