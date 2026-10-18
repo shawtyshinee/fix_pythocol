@@ -41,27 +41,27 @@ class Message:
                     except KeyError:
                         pass
 
-            elif tag_map is not None:
-                if tag_map.get("party_value") is not None:
-                    self.__update_parties(tag_map)
-                tag_map = {(f"_{str(key)}" if isinstance(key, int) else key): value for key, value, in tag_map.items()}
-                for key, value in tag_map.items():
-                    if key.replace('_', '').isdigit():
-                        key = _string_tag_id_to_tag_name(key)
-                    setattr(self, key, value)
-
-            if tags.get("party_value") is not None:
-                self.__update_parties(tags)
-            for key, value in tags.items():
+        elif tag_map is not None:
+            if tag_map.get("party_value") is not None:
+                self.__update_parties(tag_map)
+            tag_map = {(f"_{str(key)}" if isinstance(key, int) else key): value for key, value, in tag_map.items()}
+            for key, value in tag_map.items():
                 if key.replace('_', '').isdigit():
                     key = _string_tag_id_to_tag_name(key)
                 setattr(self, key, value)
 
-            self.__message_from_string = from_string
-            self.__message_tag_id = {
-                (int(key.replace('_', '')) if key.replace('_', '').isdigit() 
-                 else FixTags[key].value): value for key, value in self.__dict__.items() if not key.startswith("_Message__")
-            }
+        if tags.get("party_value") is not None:
+            self.__update_parties(tags)
+        for key, value in tags.items():
+            if key.replace('_', '').isdigit():
+                key = _string_tag_id_to_tag_name(key)
+            setattr(self, key, value)
+
+        self.__message_from_string = from_string
+        self.__message_tag_id = {
+            (int(key.replace('_', '')) if key.replace('_', '').isdigit()
+             else FixTags[key].value): value for key, value in self.__dict__.items() if not key.startswith("_Message__")
+        }
 
     def __str__(self) -> str:
         if self.__message_from_string is None:

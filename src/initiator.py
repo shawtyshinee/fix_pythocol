@@ -23,12 +23,12 @@ class Initiator:
     def __init__(self, fix_version: t.Literal['FIX.4.4', 'FIX.5.0', 'FIXT.1.1', 'FIX.4.2'], 
                  sender_id: str, target_id: str, port: int, host: str = "0.0.0.0", **config):
         settings = fix.SessionSettings(f"{os.path.dirname(__file__)}/fix.default.cfg")
-        self.session = fix.SessionID(fix_version, sender_id, target_id, "Session1")
+        self.session = fix.SessionID(fix_version, sender_id, target_id)
 
         dictionary = _get_session_dictionary(
             BeginString=fix_version,
             ConnectionType="initiator",
-            DataDictionary=f"{os.path.dirname(__file__)}/static/{fix_version}.xml",
+            DataDictionary=f"{os.path.dirname(__file__)}/static/{fix_version.replace('.', '')}.xml",
             SocketConnectHost=host,
             SocketConnectPort=port,
             TargetCompID=target_id,

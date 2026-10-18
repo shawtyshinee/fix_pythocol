@@ -1,4 +1,3 @@
-import itertools
 import os
 import time
 import uuid
@@ -102,9 +101,8 @@ def _get_session_settings(**config) -> fix.SessionSettings:
 
 def _wait_session_login(session_id: fix.SessionID, timeout: int = 5) -> None:
     sleeping_second = 0.3
-    wait_session_iteration = timeout / sleeping_second
-    count = itertools.count()
+    deadline = time.monotonic() + timeout
     while not fix.Session.lookupSession(session_id).isLoggedOn():
-        time.sleep(sleeping_second)
-        if next(count) == wait_session_iteration:
+        if time.monotonic() >= deadline:
             raise SocketConnectionError(f"Timeout exceeded. Session {str(session_id)} expired")
+        time.sleep(sleeping_second)

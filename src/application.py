@@ -32,12 +32,12 @@ class Application(fix.Application):
         self.default_response: t.Optional[Message] = None
         self.run_event = threading.Event()
 
-    def _fix_to_domain_message(self, message: Message, k) -> Message:
+    def _fix_to_domain_message(self, message: fix.Message) -> Message:
         return Message(from_string=message.toString())
 
     def _domain_to_fix_message(self, message: Message, kwargs: t.MutableMapping = None) -> fix.Message:
         if message.is_string():
-            data_dictionary = fix.DataDictionary(f"{os.path.dirname(__file__)}/static/{self.fix_version}.xml")
+            data_dictionary = fix.DataDictionary(f"{os.path.dirname(__file__)}/static/{self.fix_version.replace('.', '')}.xml")
             fix_message = fix.Message(repr(message), data_dictionary, True)
             return fix_message
         
@@ -111,15 +111,15 @@ class Application(fix.Application):
 
     def onLogout(self, session_id: fix.SessionID) -> None: return
 
-    def toAdmin(self, session_id: fix.SessionID) -> None: return
+    def toAdmin(self, message: fix.Message, session_id: fix.SessionID) -> None: return
 
-    def toApp(self, session_id: fix.SessionID) -> None: return
+    def toApp(self, message: fix.Message, session_id: fix.SessionID) -> None: return
 
-    def fromAdmin(self, session_id: fix.SessionID) -> None:
+    def fromAdmin(self, message: fix.Message, session_id: fix.SessionID) -> None:
         message = self._fix_to_domain_message(message)
         self.receieved_admin_messages_stack.insert(0, message)
 
-    def fromApp(self, session_id: fix.SessionID) -> None:
+    def fromApp(self, message: fix.Message, session_id: fix.SessionID) -> None:
         message = self._fix_to_domain_message(message)
         self.received_messages_stack.insert(0, message)
 

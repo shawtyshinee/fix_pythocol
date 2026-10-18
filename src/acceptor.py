@@ -20,12 +20,12 @@ __all__ = [
 
 class Acceptor:
     def __init__(self, fix_version: t.Literal['FIX.4.4', 'FIX.5.0', 'FIXT.1.1', 'FIX.4.2'], sender_id: str, target_id: str, port: int, **config):
-        self.session = fix.SessionID(fix_version, sender_id, target_id, "Session1")
+        self.session = fix.SessionID(fix_version, sender_id, target_id)
 
         settings = _get_session_settings(
             BeginString=fix_version,
             ConnectionType="acceptor",
-            DataDictionary=f"{os.path.dirname(__file__)}/static/{fix_version}.xml",
+            DataDictionary=f"{os.path.dirname(__file__)}/static/{fix_version.replace('.', '')}.xml",
             SocketAcceptPort=port,
             TargetCompID=target_id,
             SenderCompID=sender_id,
