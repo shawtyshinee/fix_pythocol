@@ -1,5 +1,9 @@
 # FIX Pythocol
 
+```bash
+MADE WITH CODEX' HELP :)
+```
+
 FIX Pythocol is a small Python wrapper around [QuickFIX](https://www.quickfixengine.org/).
 It provides `Initiator`, `Acceptor`, and `Message` classes for opening a FIX
 session, exchanging application messages, and writing simple response rules.
