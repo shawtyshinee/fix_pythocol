@@ -19,6 +19,13 @@ __all__ = [
 
 
 class Acceptor:
+    """FIX socket acceptor that listens for an initiator session.
+
+    The acceptor uses QuickFIX and defaults to the project's FIX 4.4 setup
+    when callers pass ``"FIX.4.4"``. Incoming application messages can be
+    handled with rules or answered with a default message.
+    """
+
     def __init__(self, fix_version: t.Literal['FIX.4.4', 'FIX.5.0', 'FIXT.1.1', 'FIX.4.2'], sender_id: str, target_id: str, port: int, **config):
         self.session = fix.SessionID(fix_version, sender_id, target_id)
 
@@ -40,21 +47,26 @@ class Acceptor:
         self._acceptor = fix.SocketAcceptor(self._application, store_factory, settings, log_factory)
 
     def start(self) -> None:
+        """Start listening and wait until the configured session logs on."""
         self._acceptor.start()
         _wait_session_login(self._application.get_session())
         self._application.run()
 
     def stop(self) -> None:
+        """Stop the QuickFIX acceptor and its application worker."""
         self._acceptor.stop()
         self._application.stop()
 
     def add_rule(self, condition: t.Callable[[Message], bool], scenario: t.Callable[[Application, Message], None]) -> None:
+        """Register a condition and callback for incoming application messages."""
         self._application.add_rule_scenario(condition, scenario)
 
     def add_default_response(self, message: Message) -> None:
+        """Set the response sent when no registered rule matches."""
         self._application.add_default_response(message)
 
     def wait_message(self, message_count: int = 1, timeout: int = 5, condition: t.Callable[[t.List[Message]], bool] = None) -> t.List[Message]:
+        """Wait for and return received application messages."""
         sleeping_second = 0.3
         wait_message_iteration = timeout / sleeping_second
         count = itertools.count()

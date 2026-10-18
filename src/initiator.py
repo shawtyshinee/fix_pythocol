@@ -20,6 +20,12 @@ __all__ = [
 
 
 class Initiator:
+    """FIX socket initiator that connects to an :class:`Acceptor` session.
+
+    Messages sent through this object receive the FIX header fields required
+    by the configured session when those fields are not already present.
+    """
+
     def __init__(self, fix_version: t.Literal['FIX.4.4', 'FIX.5.0', 'FIXT.1.1', 'FIX.4.2'], 
                  sender_id: str, target_id: str, port: int, host: str = "0.0.0.0", **config):
         settings = fix.SessionSettings(f"{os.path.dirname(__file__)}/fix.default.cfg")
@@ -61,13 +67,16 @@ class Initiator:
         raise MessageNotFound("message not found") # PLACEHOLDER
 
     def start(self) -> None:
+        """Start the initiator and wait until the session logs on."""
         self._initiator.start()
         _wait_session_login(self._application.get_session())
 
     def stop(self) -> None:
+        """Stop the QuickFIX initiator."""
         self._initiator.stop()
 
     def send(self, message: Message) -> None:
+        """Send a domain message to the connected acceptor."""
         if not message.is_string():
             __required_field_tag_ids = {
                 8: str(self.session.getBeginString()).split("=")[1].replace(SOH, ''),
@@ -82,6 +91,7 @@ class Initiator:
 
     def wait_message(self, message_count: int = 1, timeout: int = 5, 
                      condition: t.Callable[[t.List[Message]], bool] = None) -> t.List[Message]:
+        """Wait for and return received application messages."""
         messages = self.__wait_application_message(
             self._application.pop_received_message, message_count, 
             timeout, condition
@@ -90,6 +100,7 @@ class Initiator:
 
     def wait_admin_message(self, message_count: int = 1, timeout: int = 5, 
                            condition: t.Callable[[t.List[Message]], bool] = None) -> t.List[Message]:
+        """Wait for and return received administrative messages."""
         messages = self.__wait_application_message(
             self._application.pop_received_admin_message, message_count, 
             timeout, condition

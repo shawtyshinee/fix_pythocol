@@ -22,6 +22,12 @@ def _string_tag_id_to_tag_name(tag_id: str) -> str:
     return tag_name
 
 class Message:
+    """A mutable FIX message represented by tag names or numeric tag IDs.
+
+    Construct a message from a mapping, keyword fields, or a raw SOH-delimited
+    FIX string. ``model_dump`` exposes the fields by name or by numeric tag ID.
+    """
+
     def __init__(self, tag_map: t.MutableMapping = None, from_string: str = None, **tags):
         self.__party_value_tag_id = []
         if from_string is not None:

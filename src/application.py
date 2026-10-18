@@ -22,6 +22,13 @@ __all__ = [
 
 
 class Application(fix.Application):
+    """QuickFIX application bridge for domain :class:`~src.message.Message` objects.
+
+    The application converts between the project's message model and
+    ``quickfix.Message``, queues received messages, and dispatches configured
+    response scenarios.
+    """
+
     def __init__(self, fix_version: t.Literal['FIX.4.4', 'FIX.5.0', 'FIXT.1.1', 'FIX.4.2']):
         super().__init__()
         self.fix_version = fix_version
@@ -68,9 +75,11 @@ class Application(fix.Application):
         return fix_message
 
     def get_session(self) -> fix.SessionID:
+        """Return the QuickFIX session assigned during ``onCreate``."""
         return self.session_id
 
     def pop_received_message(self, count: int = 1) -> t.List[Message]:
+        """Remove and return application messages from the receive queue."""
         if len(self.received_messages_stack) < count:
             raise MessageNotFound(f"Messages in stack {str(len(self.received_messages_stack))}, not {str(count)}")
         response = []
@@ -79,6 +88,7 @@ class Application(fix.Application):
         return response
 
     def pop_received_admin_message(self, count: int = 1) -> t.List[Message]:
+        """Remove and return administrative messages from the receive queue."""
         if len(self.receieved_admin_messages_stack) < count:
             raise MessageNotFound(f"Messages in admin stack {str(len(self.receieved_admin_messages_stack))}, not {str(count)}")
         response = []
@@ -132,6 +142,7 @@ class Application(fix.Application):
                 self.send(self.default_response)
 
     def send(self, message: Message) -> None:
+        """Convert and send a domain message through the active session."""
         message = self._domain_to_fix_message(message)
         fix.Session.sendToTarget(message, self.session_id)
 
