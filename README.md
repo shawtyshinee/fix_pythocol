@@ -1,7 +1,7 @@
 # FIX Pythocol
 
 ```bash
-MADE WITH CODEX' HELP :)
+enhanced with codex' help
 ```
 
 FIX Pythocol is a small Python wrapper around [QuickFIX](https://www.quickfixengine.org/).
